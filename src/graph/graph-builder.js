@@ -82,7 +82,7 @@ export async function buildGraph(rootDir, options = {}) {
 
   for (const [file, { calls, importMap }] of fileData) {
     for (const rawCall of calls) {
-      const edge = resolveCall(rawCall, importMap, nameIndex, exportIndex, graph)
+      const edge = resolveCall(rawCall, importMap, nameIndex, exportIndex, graph, rootDir)
       graph.addEdge(edge)
       if (edge.resolved) resolved++
       else unresolved++
@@ -98,7 +98,7 @@ export async function buildGraph(rootDir, options = {}) {
 
 // --- Resolution ---
 
-function resolveCall(rawCall, importMap, nameIndex, exportIndex, graph) {
+function resolveCall(rawCall, importMap, nameIndex, exportIndex, graph, rootDir) {
   const { from, calleeName, calleeObject, file, line } = rawCall
 
   const callerNode = graph.getNode(from)
@@ -107,7 +107,7 @@ function resolveCall(rawCall, importMap, nameIndex, exportIndex, graph) {
   // Strategy 1: calleeName is a locally-imported name
   const importEntry = importMap.get(calleeName)
   if (importEntry && !importEntry.isNamespace) {
-    const key = `${relative(process.cwd(), importEntry.resolvedFile)}::${importEntry.exportedName}`
+    const key = `${relative(rootDir, importEntry.resolvedFile)}::${importEntry.exportedName}`
     const targetId = exportIndex.get(key)
     if (targetId) {
       const targetNode = graph.getNode(targetId)
@@ -119,7 +119,7 @@ function resolveCall(rawCall, importMap, nameIndex, exportIndex, graph) {
   if (calleeObject) {
     const nsEntry = importMap.get(calleeObject)
     if (nsEntry?.isNamespace) {
-      const key = `${relative(process.cwd(), nsEntry.resolvedFile)}::${calleeName}`
+      const key = `${relative(rootDir, nsEntry.resolvedFile)}::${calleeName}`
       const targetId = exportIndex.get(key)
       if (targetId) {
         const targetNode = graph.getNode(targetId)
