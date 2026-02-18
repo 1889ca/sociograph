@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node src/index.js",
-    "build:action": "esbuild src/ci/action.js --bundle --platform=node --format=esm --minify --outfile=dist/action.js --external:worker_threads"
+    "build:action": "esbuild src/ci/action.js --bundle --platform=node --format=esm --minify --outfile=dist/action.js --external:worker_threads --banner:js=\"import{createRequire}from'module';import{fileURLToPath as _fup}from'url';import{dirname as _dn}from'path';const require=createRequire(import.meta.url);const __filename=_fup(import.meta.url);const __dirname=_dn(__filename);\""
   },
   "dependencies": {
     "@typescript-eslint/typescript-estree": "^8.0.0",
