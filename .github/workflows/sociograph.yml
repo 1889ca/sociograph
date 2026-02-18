@@ -1,0 +1,31 @@
+name: Sociograph
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  analyze:
+    name: Architectural Health
+    runs-on: ubuntu-latest
+
+    permissions:
+      pull-requests: write   # post/update PR comment
+      contents: read         # checkout
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history so both base and head refs are available
+          fetch-depth: 0
+
+      - name: Sociograph
+        uses: mcm/sociograph@v1
+        with:
+          token:             ${{ secrets.GITHUB_TOKEN }}
+          base_ref:          ${{ github.event.pull_request.base.sha }}
+          head_ref:          ${{ github.event.pull_request.head.sha }}
+          working_directory: .
+          config_path:       .sociograph.yml
+          fail_on_violations: true

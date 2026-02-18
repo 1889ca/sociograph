@@ -15,18 +15,25 @@ const subcommand = args[0]
 if (subcommand === 'diff') {
   const range   = args[1]
   const verbose = args.includes('--verbose') || args.includes('-v')
+  const json    = args.includes('--json')
   const target  = args.find((a, i) => i > 1 && !a.startsWith('-')) ?? '.'
   const rootDir = resolve(target)
 
   if (!range || !range.includes('..')) {
-    process.stderr.write('Usage: sociograph diff <before>..<after> [path] [--verbose]\n')
+    process.stderr.write('Usage: sociograph diff <before>..<after> [path] [--verbose] [--json]\n')
     process.exit(1)
   }
 
-  const { runDiff }       = await import('./diff/diff-runner.js')
-  const { report: diffReport } = await import('./reporters/diff-terminal.js')
+  const { runDiff } = await import('./diff/diff-runner.js')
   const result = await runDiff(rootDir, range, { verbose })
-  process.stdout.write(diffReport(result, { verbose }) + '\n')
+
+  if (json) {
+    const { report: jsonReport } = await import('./reporters/diff-json.js')
+    process.stdout.write(jsonReport(result, { verbose }) + '\n')
+  } else {
+    const { report: diffReport } = await import('./reporters/diff-terminal.js')
+    process.stdout.write(diffReport(result, { verbose }) + '\n')
+  }
   process.exit(0)
 }
 

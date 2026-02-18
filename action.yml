@@ -1,0 +1,72 @@
+name: 'Sociograph'
+description: >
+  Architectural health analysis for pull requests. Detects stressed functions,
+  new bridges, and archetype changes between two git refs — and posts a rich
+  Markdown summary directly on the PR.
+
+author: 'mcm'
+
+branding:
+  icon: 'activity'
+  color: 'purple'
+
+inputs:
+  token:
+    description: 'GitHub token used to post the PR comment'
+    required: false
+    default: ${{ github.token }}
+
+  base_ref:
+    description: >
+      Base git ref or SHA to compare against.
+      Defaults to the PR base commit.
+    required: false
+    default: ${{ github.event.pull_request.base.sha }}
+
+  head_ref:
+    description: >
+      Head git ref or SHA to compare.
+      Defaults to the PR head commit.
+    required: false
+    default: ${{ github.event.pull_request.head.sha }}
+
+  working_directory:
+    description: 'Directory to analyze (relative to repo root)'
+    required: false
+    default: '.'
+
+  config_path:
+    description: 'Path to .sociograph.yml config file'
+    required: false
+    default: '.sociograph.yml'
+
+  fail_on_violations:
+    description: 'Exit with code 1 when threshold violations are found'
+    required: false
+    default: 'true'
+
+outputs:
+  passed:
+    description: '"true" if all configured thresholds passed'
+  stressed:
+    description: 'Number of newly-stressed functions in this diff'
+  violations:
+    description: 'Threshold violation messages, semicolon-separated'
+
+runs:
+  using: composite
+  steps:
+    - name: Install Sociograph dependencies
+      shell: bash
+      run: npm ci --prefix ${{ github.action_path }}
+
+    - name: Run Sociograph
+      shell: bash
+      run: node ${{ github.action_path }}/src/ci/action.js
+      env:
+        INPUT_TOKEN:              ${{ inputs.token }}
+        INPUT_BASE_REF:           ${{ inputs.base_ref }}
+        INPUT_HEAD_REF:           ${{ inputs.head_ref }}
+        INPUT_WORKING_DIRECTORY:  ${{ inputs.working_directory }}
+        INPUT_CONFIG_PATH:        ${{ inputs.config_path }}
+        INPUT_FAIL_ON_VIOLATIONS: ${{ inputs.fail_on_violations }}

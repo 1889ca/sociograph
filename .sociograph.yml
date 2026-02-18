@@ -1,0 +1,24 @@
+# Sociograph threshold configuration
+#
+# These defaults are intentionally lenient — tighten them as your codebase
+# matures and your team develops instincts for the signals.
+
+thresholds:
+  # Fail CI if this many (or more) functions become newly stressed in one PR.
+  # "Stressed" means the function gained concerning archetypes or saw significant
+  # metric increases. Start permissive; lower over time.
+  max_stressed: 5
+
+  # Fail CI if any function gains "The Bridge" archetype — i.e. it became the
+  # sole or primary connection between two otherwise-isolated module clusters.
+  # Bridges are architectural single points of failure worth explicit review.
+  fail_on_new_bridge: false
+
+# These archetypes are always highlighted in PR comments, regardless of whether
+# they trigger a failure. Good for team awareness even when you don't want hard
+# failures yet.
+watch_archetypes:
+  - The Bridge
+  - The Boss
+  - The Crisis Point
+  - The Workhorse
