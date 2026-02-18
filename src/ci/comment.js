@@ -136,7 +136,7 @@ export function formatComment(diffResult, evaluation) {
 
   emit()
   emit('---')
-  emit('*[Sociograph](https://github.com/mcm/sociograph) · run locally: `sociograph diff ' +
+  emit('*[Sociograph](https://github.com/1889ca/sociograph) · run locally: `sociograph diff ' +
        `${short(beforeRef)}..${short(afterRef)}\`*`)
 
   return lines.join('\n')
