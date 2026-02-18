@@ -58,7 +58,8 @@ runs:
   steps:
     - name: Install Sociograph dependencies
       shell: bash
-      run: npm ci --prefix ${{ github.action_path }}
+      working-directory: ${{ github.action_path }}
+      run: npm ci
 
     - name: Run Sociograph
       shell: bash
