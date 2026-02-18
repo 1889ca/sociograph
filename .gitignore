@@ -1,4 +1,4 @@
 node_modules/
-dist/
+# dist/ is intentionally committed — it's the pre-built GitHub Action bundle
 .DS_Store
 .sociograph/

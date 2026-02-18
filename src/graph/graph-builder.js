@@ -201,7 +201,8 @@ function buildNameIndex(graph) {
 // --- File parsing (serial or parallel) ---
 
 const WORKER_URL        = new URL('../parsers/ast-worker.js', import.meta.url)
-const PARALLEL_THRESHOLD = 150  // below this, worker spawn overhead isn't worth it
+// SG_NO_WORKERS disables the thread pool (e.g. when running as a bundled CI action)
+const PARALLEL_THRESHOLD = process.env.SG_NO_WORKERS ? Infinity : 150
 const MAX_WORKERS        = Math.min(cpus().length, 8)
 
 /**
