@@ -8,11 +8,11 @@
  */
 
 import { glob } from 'glob'
-import { parse } from '@typescript-eslint/typescript-estree'
-import { readFileSync } from 'fs'
+import { Worker } from 'worker_threads'
+import { cpus } from 'os'
 import { relative } from 'path'
 import { CallGraph } from './call-graph.js'
-import { walkFile, refineAnonymousNames } from '../parsers/ast-walker.js'
+import { walkFile } from '../parsers/ast-walker.js'
 
 const FILE_PATTERN = '**/*.{js,jsx,ts,tsx,mjs,cjs}'
 
@@ -91,21 +91,13 @@ export async function buildGraph(rootDir, options = {}) {
   // Per-file data, keyed by absolute path
   const fileData = new Map()
 
-  // 2. Parse all files
-  for (const file of files) {
-    const { functions, calls, importMap } = walkFile(file, rootDir)
+  // 2. Parse all files (parallel when large enough to justify worker overhead)
+  const parsed = await parseFiles(files, rootDir, verbose)
 
-    // Refine anonymous function names from assignment context
-    try {
-      const source = readFileSync(file, 'utf8')
-      const ast = parse(source, { jsx: true, loc: true, errorRecovery: true })
-      refineAnonymousNames(functions, calls, ast)
-    } catch { /* skip */ }
-
+  for (const [file, { functions, calls, importMap }] of parsed) {
     for (const fn of functions) {
       graph.addFunction(fn)
     }
-
     fileData.set(file, { functions, calls, importMap })
   }
 
@@ -204,6 +196,70 @@ function buildNameIndex(graph) {
     index.get(node.name).push(node.id)
   }
   return index
+}
+
+// --- File parsing (serial or parallel) ---
+
+const WORKER_URL        = new URL('../parsers/ast-worker.js', import.meta.url)
+const PARALLEL_THRESHOLD = 150  // below this, worker spawn overhead isn't worth it
+const MAX_WORKERS        = Math.min(cpus().length, 8)
+
+/**
+ * Parse all files, using a worker-thread pool when there are enough files
+ * to justify the overhead of spawning workers.
+ *
+ * @returns {Map<string, { functions, calls, importMap }>}
+ */
+async function parseFiles(files, rootDir, verbose) {
+  if (files.length < PARALLEL_THRESHOLD) {
+    const result = new Map()
+    for (const file of files) result.set(file, walkFile(file, rootDir))
+    return result
+  }
+
+  const concurrency = Math.min(MAX_WORKERS, files.length)
+  if (verbose) console.error(`  Parsing with ${concurrency} workers...`)
+
+  return new Promise((resolve, reject) => {
+    const result   = new Map()
+    const queue    = [...files]
+    let active     = 0
+    let settled    = false
+
+    const done = () => {
+      if (!settled && active === 0) { settled = true; resolve(result) }
+    }
+
+    const spawnWorker = () => {
+      const w = new Worker(WORKER_URL, { workerData: { rootDir } })
+      active++
+
+      const next = () => {
+        const file = queue.shift()
+        if (file) {
+          w.postMessage(file)
+        } else {
+          w.terminate()
+          active--
+          done()
+        }
+      }
+
+      w.on('message', ({ filePath, functions, calls, importMap }) => {
+        result.set(filePath, { functions, calls, importMap })
+        next()
+      })
+
+      w.on('error', (err) => {
+        active--
+        if (!settled) { settled = true; reject(err) }
+      })
+
+      next()
+    }
+
+    for (let i = 0; i < concurrency; i++) spawnWorker()
+  })
 }
 
 function buildExportIndex(graph) {
