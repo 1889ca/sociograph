@@ -21,6 +21,8 @@ export function report(graph, classifications, options = {}) {
   const lines = []
   const emit = (...args) => lines.push(args.join(''))
 
+  const top = options.top ?? 4   // max entries shown per archetype
+
   const stats = computeStats(graph)
   const summary = graph.summary()
   const counts = archetypeCounts(classifications)
@@ -59,14 +61,15 @@ export function report(graph, classifications, options = {}) {
       emit()
       emit('  ', pc.bold(`${archetype.emoji}  ${archetype.label.toUpperCase()}`))
 
-      const show = matches.slice(0, 4)
+      const show = matches.slice(0, top)
       for (const { nodeId, classification } of show) {
         const node = graph.getNode(nodeId)
         emitFunctionBlock(emit, node, graph, classification)
       }
 
-      if (matches.length > 4) {
-        emit('     ', pc.dim(`… and ${matches.length - 4} more`))
+      if (matches.length > top) {
+        const pct = Math.round((matches.length / summary.functions) * 100)
+        emit('     ', pc.dim(`… and ${matches.length - top} more  (${pct}% of codebase)`))
       }
     }
     emit()
@@ -213,6 +216,7 @@ function emitCompactArchetype(emit, graph, classifications, label, emoji, descri
         '     ',
         pc.dim('→ '),
         pad(node.name, 28),
+        '  ',
         pc.dim(`${node.relPath}:${node.line}`),
         pc.dim(`  cx=${node.complexity} fo=${graph.fanOut(nodeId)}`),
       )
@@ -318,7 +322,9 @@ function bar(value, max, width = 10) {
 }
 
 function pad(str, length) {
-  return (str ?? '').slice(0, length).padEnd(length)
+  const s = str ?? ''
+  if (s.length > length) return s.slice(0, length - 1) + '…'
+  return s.padEnd(length)
 }
 
 function dim(s) { return pc.dim(s) }

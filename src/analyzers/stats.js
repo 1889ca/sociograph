@@ -42,6 +42,7 @@ function summarize(values) {
   return {
     p50:  percentile(sorted, 0.50),
     p75:  percentile(sorted, 0.75),
+    p85:  percentile(sorted, 0.85),
     p90:  percentile(sorted, 0.90),
     p95:  percentile(sorted, 0.95),
     max:  sorted[n - 1],

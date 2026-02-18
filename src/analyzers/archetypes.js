@@ -20,7 +20,7 @@ export const BOSS = {
   detect(node, graph, stats) {
     const fi = graph.fanIn(node.id)
     const fo = graph.fanOut(node.id)
-    const threshold = Math.max(stats.fanIn.p90, 3)
+    const threshold = Math.max(stats.fanIn.p95, 5)
 
     if (fi < threshold) return null
 
@@ -51,18 +51,18 @@ export const WORKHORSE = {
     const fanOut = graph.fanOut(node.id)
     const loc = node.linesOfCode
 
-    // Need at least two of three metrics to be elevated
-    const complexityHigh = complexity >= stats.complexity.p75
-    const fanOutHigh     = fanOut     >= stats.fanOut.p75
-    const locHigh        = loc        >= stats.linesOfCode.p75
+    // Need at least two of three metrics to be elevated (top 15%, not top 25%)
+    const complexityHigh = complexity >= stats.complexity.p85
+    const fanOutHigh     = fanOut     >= stats.fanOut.p85
+    const locHigh        = loc        >= stats.linesOfCode.p85
 
     const score = [complexityHigh, fanOutHigh, locHigh].filter(Boolean).length
     if (score < 2) return null
 
     const confidence = clamp(
-      0.4 * normalize(complexity, stats.complexity.p50, stats.complexity.max) +
-      0.3 * normalize(fanOut, stats.fanOut.p50, stats.fanOut.max) +
-      0.3 * normalize(loc, stats.linesOfCode.p50, stats.linesOfCode.max)
+      0.4 * normalize(complexity, stats.complexity.p85, stats.complexity.max) +
+      0.3 * normalize(fanOut, stats.fanOut.p85, stats.fanOut.max) +
+      0.3 * normalize(loc, stats.linesOfCode.p85, stats.linesOfCode.max)
     )
 
     const reasons = []
