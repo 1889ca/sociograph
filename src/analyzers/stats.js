@@ -47,6 +47,24 @@ function summarize(values) {
     p95:  percentile(sorted, 0.95),
     max:  sorted[n - 1],
     mean: values.reduce((s, v) => s + v, 0) / n,
+    /**
+     * True percentile rank: what % of values are ≤ this value (0–100).
+     * e.g. rank(p95) ≈ 95, so "top 5%".
+     */
+    rank: makeRankFn(sorted),
+  }
+}
+
+function makeRankFn(sorted) {
+  return function rank(value) {
+    // Binary search: find how many sorted values are <= value
+    let lo = 0, hi = sorted.length
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1
+      if (sorted[mid] <= value) lo = mid + 1
+      else hi = mid
+    }
+    return Math.round((lo / sorted.length) * 100)
   }
 }
 

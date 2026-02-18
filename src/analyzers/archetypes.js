@@ -29,7 +29,7 @@ export const BOSS = {
     const confidence = Math.max(0.2, clamp(normalize(fi, threshold, stats.fanIn.max)))
 
     const reasons = [
-      `${fi} functions depend on this (top ${pctRank(fi, stats.fanIn)}%)`,
+      `${fi} functions depend on this (top ${topPct(fi, stats.fanIn)}%)`,
     ]
     if (dominance > 0.7) reasons.push('far more callers than callees — high single-point-of-failure risk')
 
@@ -66,9 +66,9 @@ export const WORKHORSE = {
     )
 
     const reasons = []
-    if (complexityHigh) reasons.push(`complexity ${complexity} (top ${pctRank(complexity, stats.complexity)}%)`)
-    if (fanOutHigh)     reasons.push(`calls ${fanOut} functions (top ${pctRank(fanOut, stats.fanOut)}%)`)
-    if (locHigh)        reasons.push(`${loc} lines (top ${pctRank(loc, stats.linesOfCode)}%)`)
+    if (complexityHigh) reasons.push(`complexity ${complexity} (top ${topPct(complexity, stats.complexity)}%)`)
+    if (fanOutHigh)     reasons.push(`calls ${fanOut} functions (top ${topPct(fanOut, stats.fanOut)}%)`)
+    if (locHigh)        reasons.push(`${loc} lines (top ${topPct(loc, stats.linesOfCode)}%)`)
 
     return { confidence, reasons }
   },
@@ -199,7 +199,7 @@ export const OVERLOADED = {
       0.2 * normalize(fo, stats.fanOut.p50, stats.fanOut.max)
     )
 
-    const reasons = [`${params} parameters (top ${pctRank(params, stats.params)}%)`]
+    const reasons = [`${params} parameters (top ${topPct(params, stats.params)}%)`]
     if (complexityHigh) reasons.push(`complexity ${complexity}`)
     if (fanOutHigh)     reasons.push(`calls ${fo} other functions`)
 
@@ -308,10 +308,10 @@ function normalize(value, min, max) {
   return clamp((value - min) / (max - min))
 }
 
-// What percentile rank is this value in? Returns 0-100 (100 = top of the codebase)
-function pctRank(value, stat) {
-  if (stat.max === 0) return 0
-  return Math.round((value / stat.max) * 100)
+// How far from the top is this value? Returns "top X%" string component (1 = very top).
+// e.g. a value at the 94th percentile → topPct = 6 → "top 6%"
+function topPct(value, stat) {
+  return Math.max(1, 100 - stat.rank(value))
 }
 
 export const ALL_ARCHETYPES = [BOSS, WORKHORSE, GOSSIP, HERMIT, STRANGER, OVERLOADED, GHOST, CRISIS_POINT, CODEPENDENT]
