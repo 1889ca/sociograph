@@ -12,30 +12,37 @@
 
 import { computeStats } from './stats.js'
 import { ALL_ARCHETYPES } from './archetypes.js'
+import { strongestPartner } from '../git/git-analyzer.js'
 
 /**
  * Classify all functions in the graph.
  *
  * @param {import('../graph/call-graph.js').CallGraph} graph
+ * @param {{ gitMetrics?: Map<string, import('../git/git-analyzer.js').GitMetrics> }} context
  * @returns {Map<string, Classification[]>}
  */
-export function classify(graph) {
+export function classify(graph, context = {}) {
   const stats = computeStats(graph)
   const results = new Map()
+
+  // Bind strongestPartner into context so archetypes can call it
+  const ctx = {
+    ...context,
+    strongestPartner,
+  }
 
   for (const node of graph.getAllNodes()) {
     const matches = []
 
     for (const archetype of ALL_ARCHETYPES) {
-      const result = archetype.detect(node, graph, stats)
+      const result = archetype.detect(node, graph, stats, ctx)
       if (result) {
         matches.push({
           archetype: archetype,
           label: archetype.label,
           emoji: archetype.emoji,
           description: archetype.description,
-          confidence: result.confidence,
-          reasons: result.reasons,
+          ...result,  // spreads confidence, reasons, and any archetype-specific fields (e.g. partnerNode)
         })
       }
     }

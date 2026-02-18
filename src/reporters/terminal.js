@@ -45,7 +45,7 @@ export function report(graph, classifications, options = {}) {
   // ── Characters of Note ──────────────────────────────────────────────────
 
   const notableArchetypes = ALL_ARCHETYPES.filter(a =>
-    a.label !== 'The Hermit' && a.label !== 'The Ghost'
+    a.label !== 'The Hermit' && a.label !== 'The Ghost' && a.label !== 'The Codependent'
   )
 
   const hasNotable = notableArchetypes.some(a => (counts.get(a.label) ?? 0) > 0)
@@ -75,6 +75,10 @@ export function report(graph, classifications, options = {}) {
     emit()
     emit('  ' + pc.dim('─'.repeat(WIDTH - 2)))
   }
+
+  // ── Codependents (pair view) ─────────────────────────────────────────────
+
+  emitCodependents(emit, graph, classifications, top)
 
   // ── Hermits & Ghosts (compact) ───────────────────────────────────────────
 
@@ -193,6 +197,53 @@ function emitFunctionBlock(emit, node, graph, classification) {
   }
 }
 
+function emitCodependents(emit, graph, classifications, top) {
+  const matches = getByArchetype(classifications, 'The Codependent')
+  if (matches.length === 0) return
+
+  // Deduplicate pairs — if A↔B is shown, don't show B↔A
+  const seen = new Set()
+  const pairs = []
+
+  for (const { nodeId, classification } of matches) {
+    const partner = classification.partnerNode
+    if (!partner) continue
+    const key = [nodeId, partner.id].sort().join('::')
+    if (seen.has(key)) continue
+    seen.add(key)
+    pairs.push({ nodeId, classification, partner })
+  }
+
+  if (pairs.length === 0) return
+
+  emit()
+  emit('  ', pc.bold(`🔗  THE CODEPENDENT`), '  ', pc.dim(`(${pairs.length} pair${pairs.length === 1 ? '' : 's'})`))
+  emit('  ', pc.dim('Always change together — may need to be merged or co-located.'))
+  emit()
+
+  for (const { nodeId, classification, partner } of pairs.slice(0, top)) {
+    const node = graph.getNode(nodeId)
+    if (!node) continue
+    const pct = Math.round(classification.confidence * 100 + 50)  // unnormalize from 0-1 back to 50-100%
+    emit(
+      '     ',
+      pc.bold(pc.white(pad(node.name, 24))),
+      pc.dim('  ↔  '),
+      pc.bold(pc.white(pad(partner.name, 24))),
+    )
+    for (const reason of classification.reasons) {
+      emit('     ', pc.dim('• '), pc.dim(reason))
+    }
+    if (partner.module !== node.module) {
+      emit('     ', pc.dim('• '), pc.yellow(`different modules: ${node.module} vs ${partner.module}`))
+    }
+  }
+
+  if (pairs.length > top) {
+    emit('     ', pc.dim(`… and ${pairs.length - top} more pairs`))
+  }
+}
+
 function emitCompactArchetype(emit, graph, classifications, label, emoji, description) {
   const matches = getByArchetype(classifications, label)
   if (matches.length === 0) return
@@ -289,6 +340,19 @@ function computeRisks(graph, classifications) {
         score: worstCount * 10,
       })
     }
+  }
+
+  // Crisis points — fire magnets
+  const crisisPoints = getByArchetype(classifications, 'The Crisis Point')
+  for (const { nodeId, classification } of crisisPoints.slice(0, 2)) {
+    const node = graph.getNode(nodeId)
+    if (!node || risks.some(r => r.name === node.name)) continue
+    risks.push({
+      name: node.name,
+      location: `${node.relPath}:${node.line}`,
+      reason: classification.reasons[0],
+      score: classification.confidence * 100,
+    })
   }
 
   // High-complexity ghost — forgotten complexity

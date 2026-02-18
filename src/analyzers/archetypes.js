@@ -237,6 +237,68 @@ export const GHOST = {
   },
 }
 
+// --- THE CRISIS POINT ---
+// Shows up disproportionately in bugfix commits.
+// This is where fires start. Touch it carefully.
+
+export const CRISIS_POINT = {
+  label: 'The Crisis Point',
+  emoji: '🔥',
+  description: 'Disproportionate share of bug-fix commits — this is where fires start.',
+
+  detect(node, graph, stats, context) {
+    const m = context?.gitMetrics?.get(node.id)
+    if (!m || m.commits < 5) return null
+
+    const fixRatio = m.fixCommits / m.commits
+    if (fixRatio < 0.4) return null
+
+    const confidence = Math.max(0.2, clamp(normalize(fixRatio, 0.4, 1.0)))
+    const reasons = [
+      `${m.fixCommits} of ${m.commits} commits were bug fixes (${Math.round(fixRatio * 100)}%)`,
+    ]
+    if (m.authors.size > 2) reasons.push(`touched by ${m.authors.size} different authors — high turbulence`)
+
+    return { confidence, reasons }
+  },
+}
+
+// --- THE CODEPENDENT ---
+// Always changes alongside another specific function.
+// They're practically one unit — but live in separate places.
+
+export const CODEPENDENT = {
+  label: 'The Codependent',
+  emoji: '🔗',
+  description: 'Always changes with another function — they may need to be merged or co-located.',
+
+  detect(node, graph, stats, context) {
+    if (!context?.gitMetrics) return null
+    const { strongestPartner } = context
+
+    const partner = strongestPartner(node.id, context.gitMetrics)
+    if (!partner) return null
+    if (partner.correlation < 0.5) return null
+    if (partner.coCount < 3) return null
+
+    const partnerNode = graph.getNode(partner.partnerId)
+    const confidence = clamp(normalize(partner.correlation, 0.5, 1.0))
+    const pct = Math.round(partner.correlation * 100)
+
+    const reasons = [
+      `${pct}% of changes also touch ${partnerNode?.name ?? partner.partnerId}`,
+      `co-changed ${partner.coCount} times`,
+    ]
+
+    if (partnerNode && partnerNode.module !== node.module) {
+      reasons.push(`partner lives in a different module — consider co-location`)
+    }
+
+    // Stash partner info for the reporter
+    return { confidence, reasons, partnerNode }
+  },
+}
+
 // --- Helpers ---
 
 function clamp(v) { return Math.min(1, Math.max(0, v)) }
@@ -252,4 +314,4 @@ function pctRank(value, stat) {
   return Math.round((value / stat.max) * 100)
 }
 
-export const ALL_ARCHETYPES = [BOSS, WORKHORSE, GOSSIP, HERMIT, STRANGER, OVERLOADED, GHOST]
+export const ALL_ARCHETYPES = [BOSS, WORKHORSE, GOSSIP, HERMIT, STRANGER, OVERLOADED, GHOST, CRISIS_POINT, CODEPENDENT]
