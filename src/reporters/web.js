@@ -153,9 +153,10 @@ export async function buildGraphPayload(graph, classifications, options = {}) {
 
   return {
     meta: {
-      path:           displayPath,
-      totalFunctions: allNodes.length,
-      totalEdges:     graph.edges.length,
+      path:              displayPath,
+      totalFunctions:    allNodes.length,
+      renderedFunctions: kept.length,
+      totalEdges:        graph.edges.length,
       truncated,
     },
     nodes,
