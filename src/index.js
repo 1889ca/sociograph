@@ -9,6 +9,28 @@ import { report as terminalReport } from './reporters/terminal.js'
 import { report as webReport } from './reporters/web.js'
 
 const args = process.argv.slice(2)
+const subcommand = args[0]
+
+// ── diff subcommand ─────────────────────────────────────────────────────────
+if (subcommand === 'diff') {
+  const range   = args[1]
+  const verbose = args.includes('--verbose') || args.includes('-v')
+  const target  = args.find((a, i) => i > 1 && !a.startsWith('-')) ?? '.'
+  const rootDir = resolve(target)
+
+  if (!range || !range.includes('..')) {
+    process.stderr.write('Usage: sociograph diff <before>..<after> [path] [--verbose]\n')
+    process.exit(1)
+  }
+
+  const { runDiff }       = await import('./diff/diff-runner.js')
+  const { report: diffReport } = await import('./reporters/diff-terminal.js')
+  const result = await runDiff(rootDir, range, { verbose })
+  process.stdout.write(diffReport(result, { verbose }) + '\n')
+  process.exit(0)
+}
+
+// ── default: analyze subcommand ─────────────────────────────────────────────
 const target   = args.find(a => !a.startsWith('-')) ?? '.'
 const verbose  = args.includes('--verbose') || args.includes('-v')
 const noGit    = args.includes('--no-git')
