@@ -11,6 +11,7 @@ import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { existsSync } from 'fs'
 import { join } from 'path'
+import { getHeadHash, readCache, writeCache } from './git-cache.js'
 
 const exec = promisify(execFile)
 
@@ -48,10 +49,22 @@ export async function findGitRoot(dir) {
  * @returns {Promise<{ commits: Commit[], gitRoot: string } | null>}
  */
 export async function fetchCommits(rootDir, options = {}) {
-  const { limit = 500, verbose = false } = options
+  const { limit = 500, verbose = false, noCache = false } = options
 
   const gitRoot = await findGitRoot(rootDir)
   if (!gitRoot) return null
+
+  // Check cache before shelling out to git
+  if (!noCache) {
+    const headHash = await getHeadHash(gitRoot)
+    if (headHash) {
+      const cached = readCache(gitRoot, limit, headHash)
+      if (cached) {
+        if (verbose) process.stderr.write(`  Git history loaded from cache (${cached.length} commits)\n`)
+        return { commits: cached, gitRoot }
+      }
+    }
+  }
 
   if (verbose) process.stderr.write(`  Reading git history (last ${limit} commits)...\n`)
 
@@ -79,6 +92,11 @@ export async function fetchCommits(rootDir, options = {}) {
 
   const commits = parse(stdout)
   if (verbose) process.stderr.write(`  Parsed ${commits.length} commits\n`)
+
+  if (!noCache) {
+    const headHash = await getHeadHash(gitRoot)
+    if (headHash) writeCache(gitRoot, limit, headHash, commits)
+  }
 
   return { commits, gitRoot }
 }

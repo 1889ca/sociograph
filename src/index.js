@@ -34,6 +34,7 @@ if (subcommand === 'diff') {
 const target   = args.find(a => !a.startsWith('-')) ?? '.'
 const verbose  = args.includes('--verbose') || args.includes('-v')
 const noGit    = args.includes('--no-git')
+const noCache  = args.includes('--no-cache')
 const topArg   = args.find(a => a.startsWith('--top='))
 const limitArg = args.find(a => a.startsWith('--git-limit='))
 const webArg   = args.find(a => a === '--web' || a.startsWith('--web='))
@@ -53,7 +54,7 @@ const graph = await buildGraph(rootDir, { verbose })
 
 let gitMetrics = null
 if (!noGit) {
-  gitMetrics = await analyzeGit(rootDir, graph, { limit: gitLimit, verbose })
+  gitMetrics = await analyzeGit(rootDir, graph, { limit: gitLimit, verbose, noCache })
 }
 
 const classifications = classify(graph, { gitMetrics })
