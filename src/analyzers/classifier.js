@@ -13,6 +13,7 @@
 import { computeStats } from './stats.js'
 import { ALL_ARCHETYPES } from './archetypes.js'
 import { strongestPartner } from '../git/git-analyzer.js'
+import { computeBridgeScores } from '../graph/bridge-detector.js'
 
 /**
  * Classify all functions in the graph.
@@ -23,12 +24,13 @@ import { strongestPartner } from '../git/git-analyzer.js'
  */
 export function classify(graph, context = {}) {
   const stats = computeStats(graph)
+  const bridgeScores = computeBridgeScores(graph)
   const results = new Map()
 
-  // Bind strongestPartner into context so archetypes can call it
   const ctx = {
     ...context,
     strongestPartner,
+    bridgeScores,
   }
 
   for (const node of graph.getAllNodes()) {

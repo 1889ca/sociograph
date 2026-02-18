@@ -16,6 +16,7 @@ const ARCHETYPE_COLORS = {
   'The Ghost':        pc.gray,
   'The Crisis Point': pc.red,
   'The Codependent':  (s) => pc.magenta(s),
+  'The Bridge':       pc.cyan,
 }
 
 function colorArchetype(label) {

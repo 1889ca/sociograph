@@ -48,7 +48,7 @@ export const THRESHOLDS = {
 // Archetypes that are "concerning" — gaining one is notable, losing one is good.
 const CONCERNING = new Set([
   'The Boss', 'The Workhorse', 'The Gossip', 'The Overloaded',
-  'The Crisis Point', 'The Codependent', 'The Stranger',
+  'The Crisis Point', 'The Codependent', 'The Stranger', 'The Bridge',
 ])
 
 /**

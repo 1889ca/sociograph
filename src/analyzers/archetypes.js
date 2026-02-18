@@ -299,6 +299,32 @@ export const CODEPENDENT = {
   },
 }
 
+// --- THE BRIDGE ---
+// The sole or dominant connection between two otherwise isolated module clusters.
+// Quiet, load-bearing, easy to miss until it breaks.
+
+export const BRIDGE = {
+  label: 'The Bridge',
+  emoji: '🌉',
+  description: 'Sole or primary connector between two module clusters — a fragile linchpin.',
+
+  detect(node, graph, stats, ctx) {
+    const info = ctx?.bridgeScores?.get(node.id)
+    if (!info) return null
+
+    // confidence scales from 0 (barely qualifies at 50%) to 1 (100% exclusive)
+    const confidence = clamp(normalize(info.score, 0.5, 1.0))
+
+    const reasons = info.pairs.slice(0, 3).map(p => {
+      if (p.total === 1) return `sole link between ${p.from} → ${p.to}`
+      const pct = Math.round(p.exclusivity * 100)
+      return `${pct}% of connections between ${p.from} and ${p.to} (${p.total} total)`
+    })
+
+    return { confidence, reasons }
+  },
+}
+
 // --- Helpers ---
 
 function clamp(v) { return Math.min(1, Math.max(0, v)) }
@@ -314,4 +340,4 @@ function topPct(value, stat) {
   return Math.max(1, 100 - stat.rank(value))
 }
 
-export const ALL_ARCHETYPES = [BOSS, WORKHORSE, GOSSIP, HERMIT, STRANGER, OVERLOADED, GHOST, CRISIS_POINT, CODEPENDENT]
+export const ALL_ARCHETYPES = [BOSS, WORKHORSE, GOSSIP, HERMIT, STRANGER, OVERLOADED, GHOST, CRISIS_POINT, CODEPENDENT, BRIDGE]

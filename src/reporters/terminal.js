@@ -355,6 +355,19 @@ function computeRisks(graph, classifications) {
     })
   }
 
+  // Fragile linchpins — exclusive module bridges
+  const bridges = getByArchetype(classifications, 'The Bridge')
+  for (const { nodeId, classification } of bridges.slice(0, 2)) {
+    const node = graph.getNode(nodeId)
+    if (!node || risks.some(r => r.name === node.name)) continue
+    risks.push({
+      name: node.name,
+      location: `${node.relPath}:${node.line}`,
+      reason: classification.reasons[0] ?? 'sole connector between module clusters',
+      score: classification.confidence * 80,
+    })
+  }
+
   // High-complexity ghost — forgotten complexity
   const ghosts = getByArchetype(classifications, 'The Ghost')
   const complexGhost = ghosts
