@@ -9,6 +9,7 @@ import pc from 'picocolors'
 import { archetypeCounts, getByArchetype } from '../analyzers/classifier.js'
 import { ALL_ARCHETYPES } from '../analyzers/archetypes.js'
 import { computeStats } from '../analyzers/stats.js'
+import { detectClusters } from '../graph/cluster-detector.js'
 
 const WIDTH = 72
 
@@ -87,6 +88,10 @@ export function report(graph, classifications, options = {}) {
 
   emitCompactArchetype(emit, graph, classifications, 'The Ghost', '💀',
     'Barely called — non-trivial code that may be forgotten.')
+
+  // ── Clusters ─────────────────────────────────────────────────────────────
+
+  emitClusters(emit, graph, detectClusters(graph))
 
   // ── Social Health ────────────────────────────────────────────────────────
 
@@ -278,6 +283,50 @@ function emitCompactArchetype(emit, graph, classifications, label, emoji, descri
   if (trivial > 0) {
     emit('     ', pc.dim(`+ ${trivial} trivial`))
   }
+}
+
+// ── Cluster display ──────────────────────────────────────────────────────────
+
+function emitClusters(emit, graph, clusters) {
+  if (clusters.length === 0) return
+
+  const multiCount = clusters.filter(c => c.isMultiModule).length
+
+  emit()
+  emit(
+    '  ', pc.bold('🧩  CLUSTERS'),
+    '  ', pc.dim(`(${clusters.length} communities`),
+    multiCount > 0 ? pc.dim(' · ') + pc.yellow(`${multiCount} cross-module`) : '',
+    pc.dim(')')
+  )
+  emit('  ', pc.dim('Groups of functions tightly coupled by call patterns.'))
+
+  const show = clusters.slice(0, 6)
+
+  for (const cluster of show) {
+    emit()
+
+    const moduleStr = cluster.modules.join(', ')
+    const label = cluster.isMultiModule
+      ? pc.yellow(`⚠️  ${moduleStr}`)
+      : pc.dim(moduleStr)
+
+    emit('  ', label, '  ', pc.dim(`(${cluster.size} functions)`))
+
+    const hubNames = cluster.hubs
+      .map(id => graph.getNode(id)?.name ?? id)
+      .join(', ')
+    emit('     ', pc.dim(hubNames))
+  }
+
+  const remaining = clusters.length - show.length
+  if (remaining > 0) {
+    emit()
+    emit('     ', pc.dim(`… and ${remaining} more clusters`))
+  }
+
+  emit()
+  emit('  ' + pc.dim('─'.repeat(WIDTH - 2)))
 }
 
 // ── Risk computation ─────────────────────────────────────────────────────────
