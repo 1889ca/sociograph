@@ -1,0 +1,19 @@
+{
+  "name": "sociograph",
+  "version": "0.1.0",
+  "description": "A sociologist's debugger — traces responsibility, not execution",
+  "type": "module",
+  "bin": {
+    "sociograph": "./src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@typescript-eslint/typescript-estree": "^8.0.0",
+    "glob": "^11.0.0",
+    "graphology": "^0.25.4",
+    "graphology-communities-louvain": "^2.0.0",
+    "picocolors": "^1.1.0"
+  }
+}
