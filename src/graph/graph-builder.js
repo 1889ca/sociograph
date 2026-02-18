@@ -15,6 +15,47 @@ import { CallGraph } from './call-graph.js'
 import { walkFile, refineAnonymousNames } from '../parsers/ast-walker.js'
 
 const FILE_PATTERN = '**/*.{js,jsx,ts,tsx,mjs,cjs}'
+
+// Names that shadow native JS/DOM/Node methods — never resolve via global-name
+// fallback because calls are virtually always to the built-in, not a user function.
+const NATIVE_METHOD_NAMES = new Set([
+  // Array
+  'map', 'filter', 'reduce', 'reduceRight', 'forEach', 'find', 'findIndex',
+  'findLast', 'findLastIndex', 'some', 'every', 'flat', 'flatMap',
+  'push', 'pop', 'shift', 'unshift', 'splice', 'slice', 'concat',
+  'join', 'reverse', 'sort', 'fill', 'copyWithin', 'includes', 'indexOf',
+  'lastIndexOf', 'entries', 'keys', 'values', 'at',
+  // Object
+  'assign', 'keys', 'values', 'entries', 'create', 'freeze', 'seal',
+  'fromEntries', 'getOwnPropertyNames', 'defineProperty', 'hasOwn',
+  // String
+  'split', 'match', 'matchAll', 'replace', 'replaceAll', 'search',
+  'trim', 'trimStart', 'trimEnd', 'padStart', 'padEnd',
+  'startsWith', 'endsWith', 'includes', 'indexOf', 'lastIndexOf',
+  'slice', 'substring', 'charAt', 'charCodeAt', 'toLowerCase', 'toUpperCase',
+  'repeat', 'normalize',
+  // Promise / async
+  'then', 'catch', 'finally', 'resolve', 'reject', 'all', 'allSettled',
+  'race', 'any',
+  // Math
+  'round', 'floor', 'ceil', 'abs', 'min', 'max', 'pow', 'sqrt', 'random',
+  'sign', 'trunc', 'log', 'log2', 'log10',
+  // JSON / Date / general built-ins
+  'parse', 'stringify', 'toString', 'valueOf', 'toJSON', 'toISOString',
+  'toLocaleDateString', 'toLocaleString', 'getTime', 'getDate', 'getDay',
+  'getMonth', 'getFullYear', 'getHours', 'getMinutes', 'getSeconds',
+  'setDate', 'setMonth', 'setFullYear',
+  // EventEmitter / Node
+  'emit', 'on', 'off', 'once', 'removeListener', 'removeAllListeners',
+  'addListener', 'prependListener',
+  // Generic method names too short/common to trust
+  'get', 'set', 'has', 'add', 'delete', 'clear', 'size',
+  'call', 'apply', 'bind',
+  'error', 'warn', 'info', 'debug', 'log',
+  'send', 'write', 'read', 'end', 'close', 'open', 'destroy',
+  'next', 'done', 'return', 'throw',
+  'test', 'exec', 'compile',
+])
 const IGNORE_PATTERNS = [
   '**/node_modules/**',
   '**/dist/**',
@@ -138,8 +179,10 @@ function resolveCall(rawCall, importMap, nameIndex, exportIndex, graph, rootDir)
   }
 
   // Strategy 4: unique name match across the whole project
+  // Skip names that shadow native JS methods — calls to e.g. `.map()` are
+  // overwhelmingly array/string built-ins, not a user-defined `map` function.
   const allCandidates = nameIndex.get(calleeName) ?? []
-  if (allCandidates.length === 1) {
+  if (allCandidates.length === 1 && !NATIVE_METHOD_NAMES.has(calleeName)) {
     const targetNode = graph.getNode(allCandidates[0])
     return makeEdge(from, allCandidates[0], calleeName, true, callerModule !== targetNode?.module, file, line)
   }
