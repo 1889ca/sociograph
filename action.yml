@@ -58,16 +58,15 @@ runs:
   steps:
     - name: Install Sociograph dependencies
       shell: bash
-      working-directory: ${{ github.action_path }}
-      run: npm ci
+      run: cd "${{ github.action_path }}" && npm ci --omit=dev
 
     - name: Run Sociograph
       shell: bash
-      run: node ${{ github.action_path }}/src/ci/action.js
+      run: cd "${{ github.action_path }}" && node src/ci/action.js
       env:
         INPUT_TOKEN:              ${{ inputs.token }}
         INPUT_BASE_REF:           ${{ inputs.base_ref }}
         INPUT_HEAD_REF:           ${{ inputs.head_ref }}
-        INPUT_WORKING_DIRECTORY:  ${{ inputs.working_directory }}
-        INPUT_CONFIG_PATH:        ${{ inputs.config_path }}
+        INPUT_WORKING_DIRECTORY:  ${{ github.workspace }}/${{ inputs.working_directory }}
+        INPUT_CONFIG_PATH:        ${{ github.workspace }}/${{ inputs.config_path }}
         INPUT_FAIL_ON_VIOLATIONS: ${{ inputs.fail_on_violations }}
